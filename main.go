@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-var addr = flag.String("addr", os.Getenv("PORT"), "http service address")
+var addr = flag.String("0.0.0.0", os.Getenv("PORT"), "http service address")
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL)
@@ -34,6 +34,7 @@ func main() {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
+	log.Println(&addr)
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)

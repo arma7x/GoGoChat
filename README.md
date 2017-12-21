@@ -15,7 +15,7 @@ using the following commands.
 
     $ go run *.go
 
-To use the chat example, open http://localhost:8080/ in your browser.
+Live example, open https://gogogochat.herokuapp.com/ in your browser.
 
 ## Server
 
