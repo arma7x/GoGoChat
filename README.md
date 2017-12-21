@@ -13,8 +13,6 @@ development environment.
 Once you have Go up and running, you can download, build and run the example
 using the following commands.
 
-    $ go get github.com/gorilla/websocket
-    $ cd `go list -f '{{.Dir}}' github.com/gorilla/websocket/examples/chat`
     $ go run *.go
 
 To use the chat example, open http://localhost:8080/ in your browser.
@@ -35,10 +33,10 @@ client's goroutines reads messages from this channel and writes the messages to
 the websocket. The other client goroutine reads messages from the websocket and
 sends them to the hub.
 
-### Hub 
+### Hub
 
 The code for the `Hub` type is in
-[hub.go](https://github.com/gorilla/websocket/blob/master/examples/chat/hub.go). 
+[hub.go](https://github.com/gorilla/websocket/blob/master/examples/chat/hub.go).
 The application's `main` function starts the hub's `run` method as a goroutine.
 Clients send requests to the hub using the `register`, `unregister` and
 `broadcast` channels.
