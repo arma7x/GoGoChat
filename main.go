@@ -8,6 +8,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 )
 
 var addr = flag.String("addr", os.Getenv("PORT"), "http service address")
