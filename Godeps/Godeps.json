@@ -1,0 +1,20 @@
+{
+	"ImportPath": "chat",
+	"GoVersion": "go1.9",
+	"GodepVersion": "v79",
+	"Packages": [
+		"./"
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/gorilla/websocket",
+			"Comment": "v1.2.0-23-gcdedf21",
+			"Rev": "cdedf21e585dae942951e34d6defc3215b4280fa"
+		},
+		{
+			"ImportPath": "github.com/speps/go-hashids",
+			"Comment": "v1.0.0-16-g2aa1a76",
+			"Rev": "2aa1a76a4e7c76dbe7d39f40661ab0261d70153a"
+		}
+	]
+}

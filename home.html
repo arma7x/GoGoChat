@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>GoGoChat</title>
+<script type="text/javascript">
+window.onload = function () {
+    var conn;
+    var global_username = "GUEST"
+    var global_room = "0"
+    var global_id = "0"
+    var msg = document.getElementById("msg");
+    var log = document.getElementById("log");
+    var room_list = document.getElementById("room_list");
+    var queue_list = document.getElementById("queue_list");
+    var online = document.getElementById("online");
+    var rooms = document.getElementById("rooms");
+    var admins = document.getElementById("admins");
+    var username = document.getElementById("username");
+
+    function appendLog(item) {
+        var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+        log.appendChild(item);
+        if (doScroll) {
+            log.scrollTop = log.scrollHeight - log.clientHeight;
+        }
+    }
+
+    function joinRoom(id) {
+        if (!conn) {
+            return false;
+        }
+        if (!id) {
+            return false;
+        }
+        global_room = id
+        conn.send(JSON.stringify({"body": id,"type": "join"}));
+    }
+
+    function leaveRoom(id) {
+        if (!conn) {
+            return false;
+        }
+        if (!id) {
+            return false;
+        }
+        global_room = "0"
+        log.innerHTML = '';
+        conn.send(JSON.stringify({"body": id,"type": "leave"}));
+    }
+
+    document.getElementById("clearLog").onclick = function () {
+        log.innerHTML = '';
+    };
+
+    document.getElementById("signAsAdmin").onclick = function () {
+        conn.send(JSON.stringify({"body": "ADMIN","type": "auth"}));
+    };
+
+    document.getElementById("signAsGuest").onclick = function () {
+        room_list.innerHTML = '';
+        queue_list.innerHTML = ''
+        conn.send(JSON.stringify({"body": "GUEST","type": "auth"}));
+    };
+
+    document.getElementById("queueRoom").onclick = function () {
+        conn.send(JSON.stringify({"body": global_id,"type": "queue"}));
+    };
+
+    document.getElementById("form").onsubmit = function () {
+        if (!conn) {
+            return false;
+        }
+        if (!msg.value) {
+            return false;
+        }
+        conn.send(JSON.stringify({"body": msg.value,"type": "message", "room": global_room}));
+        var item = document.createElement("div");
+        item.innerHTML = '<span class="sender-triangle right sender"><b>You</b>:' + msg.value + '</span>';
+        appendLog(item);
+        msg.value = "";
+        return false;
+    };
+
+    if (window["WebSocket"]) {
+        conn = new WebSocket((document.location.protocol === "https:" ? "wss://" : "ws://") + document.location.host + "/ws");
+        conn.onclose = function (evt) {
+            var item = document.createElement("div");
+            item.innerHTML = "<b>Connection closed.</b>";
+            appendLog(item);
+        };
+        conn.onmessage = function (evt) {
+            var messages = evt.data.split('\n');
+            for (var i = 0; i < messages.length; i++) {
+                var item = document.createElement("div");
+                var m = JSON.parse(messages[i])
+                if(m.Tag === 'message') {
+                    item.innerHTML = '<span class="recipient-triangle left recipient"><b>'+ m.Username + '</b>:' + m.Body + '</span>';
+                    appendLog(item);
+                } else if (m.Tag === 'online') {
+                    online.innerHTML = "<b>Online: " + m.Body + "</b>";
+                } else if (m.Tag === 'rooms') {
+                    rooms.innerHTML = "<b>Rooms: " + m.Body + "</b>";
+                } else if (m.Tag === 'admins') {
+                    admins.innerHTML = "<b>Admins: " + m.Body + "</b>";
+                } else if (m.Tag === 'handshake') {
+                    username.innerHTML = "<b>User: " + m.Username + "</b>";
+                    global_username = m.Username
+                    global_id = m.Id.toString()
+                    alert(m.Body)
+                } else if (m.Tag === 'queue_list') {
+                    if (m.Body !== 'null') {
+                        var ol = document.createElement("ol");
+                        list = JSON.parse(m.Body)
+                        for (i in list) {
+                            (function(room) {
+                                var li = document.createElement("li");
+                                //li.innerHTML = "<span>" + list[i] + "</span>"
+                                var c = document.createElement("span");
+                                c.innerHTML = '<button value="' + room + '" type="button" style="margin:0 1px;">JOIN '+room+'</button>';
+                                c.addEventListener('click', function (){
+                                    joinRoom(room)
+                                })
+                                li.appendChild(c)
+                                ol.appendChild(li)
+                            })(list[i])
+                        }
+                        var a = document.createElement("div");
+                        a.innerHTML = '<p style="text-align:center"><b>QUEUE LIST</b></p>';
+                        var b = document.createElement("div");
+                        b.style.border = 'solid'
+                        b.style.borderColor = '#E1FFC7'
+                        b.style.background = '#E1FFC7'
+                        b.style.margin = '0.4em'
+                        b.style.padding = '0.4em'
+                        b.appendChild(ol)
+                        a.appendChild(b)
+                        queue_list.innerHTML = ''
+                        queue_list.appendChild(a)
+                    } else {
+                      queue_list.innerHTML = ''
+                      queue_list.innerHTML = '<p style="text-align:center"><b>QUEUE LIST</b><br><b>EMPTY</b></p>';
+                    }
+                } else if (m.Tag === 'room_list') {
+                    var rl = JSON.parse(m.Body)
+                    var o = document.createElement("div");
+                    var myroom;
+                    for(room in rl){
+                        (function(room) {
+                            var a = document.createElement("div");
+                            a.style.border = 'solid'
+                            a.style.borderColor = (room !== global_id ? (global_room == room ? '#B6DBE7' : '#F6F6FD') : '#E1FFC7')
+                            a.style.background = (room !== global_id ? (global_room == room ? '#B6DBE7' : '#F6F6FD') : '#E1FFC7')
+                            a.style.margin = '0.4em'
+                            a.style.padding = '0.4em'
+                            a.innerHTML = "<b>" + (room !== global_id ? 'GUEST ROOM: ' : 'YOUR ROOM: ') + room + "</b>";
+                            var ol = document.createElement("ol");
+                            for(user in rl[room]) {
+                                var li = document.createElement("li");
+                                li.innerHTML = "<span>" + rl[room][user].username + "@" + rl[room][user].level + "</span>";
+                                if (global_username === rl[room][user].username && room !== global_id) {
+                                    var c = document.createElement("span");
+                                    c.innerHTML = '<button value="' + room + '" type="button" style="margin:0 1px;">LEAVE</button>';
+                                    c.addEventListener('click', function (){
+                                        leaveRoom(room)
+                                    })
+                                    li.appendChild(c)
+                                }
+                                ol.appendChild(li)
+                            }
+                            var c = document.createElement("span");
+                            if (room !== global_id) {
+                                c.innerHTML = '<button value="' + room + '" type="button">JOIN</button>';
+                                c.addEventListener('click', function (){
+                                    joinRoom(room)
+                                })
+                            }
+                            a.appendChild(ol)
+                            a.appendChild(c)
+                            if (room !== global_id) {
+                                o.appendChild(a);
+                            } else {
+                                myroom = a
+                            }
+                        })(room)
+                    }
+                    o.prepend(myroom)
+                    var h = document.createElement("span");
+                    h.innerHTML = '<p style="text-align:center"><b>ROOM LIST</b></p>'
+                    o.prepend(h);
+                    room_list.innerHTML = '';
+                    room_list.appendChild(o);
+                }
+            }
+        };
+    } else {
+        var item = document.createElement("div");
+        item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
+        appendLog(item);
+    }
+};
+</script>
+<style type="text/css">
+html {
+    overflow: hidden;
+}
+
+body {
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: gray;
+    font-family: Monaco, MonoSpace;
+    font-size: 14px;
+}
+
+#container {
+    display: flex;
+    flex-direction: row;
+    position: absolute;
+    top: 0.5em;
+    left: 0.5em;
+    right: 0.5em;
+    bottom: 3em;
+}
+
+#log {
+    display: flex;
+    flex-direction: column;
+    background: #EFE7DD;
+    margin: 0 0.5em 0 0;
+    padding: 0.5em;
+    width:80%;
+    overflow: auto;
+}
+
+#sidebar {
+    display: flex;
+    flex-direction: column;
+    background: #EFE7DD;
+    width:20%;
+    overflow:auto;
+}
+
+#form {
+    padding: 0.5em;
+    margin: 0;
+    position: absolute;
+    bottom: 0.5em;
+    left: 0px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.box {
+    margin:0.4em;
+    padding:0.4em;
+    border:solid;
+    border-color:#E1FFC7;
+    background:#E1FFC7;
+}
+
+.btn {
+    margin:0.4em;
+    padding:0.4em;
+}
+
+/* THE SPEECH BUBBLE
+------------------------------------------------------------------------------------------------------------------------------- */
+
+.recipient {
+    float:left;
+    border: 2px solid #F6F6FD;
+    border-radius: 0px 3px 3px 3px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+.recipient-triangle {
+  position:relative;
+  padding:15px;
+  margin:1em 0 0 0;
+  color:#000000;
+  background:#F6F6FD; /* default background for browsers without gradient support */
+}
+
+.recipient-triangle:after {
+  content:"";
+  position:absolute;
+  bottom:-20px; /* value = - border-top-width - border-bottom-width */
+  left:50px; /* controls horizontal position */
+  border-width:20px 0 0 20px; /* vary these values to change the angle of the vertex */
+  border-style:solid;
+  border-color:#F6F6FD transparent;
+  /* reduce the damage in FF3.0 */
+  display:block;
+  width:0;
+}
+
+.recipient-triangle.left {
+  margin-left:10px;
+  background:#F6F6FD;
+}
+
+.recipient-triangle.left:after {
+  top:-2px;
+  left:-10px; /* value = - border-left-width - border-right-width */
+  bottom:auto;
+  border-width:0 10px 15px 0; /* vary these values to change the angle of the vertex */
+  border-color:transparent #F6F6FD;
+}
+
+.sender {
+    float:right;
+    border: 2px solid #E1FFC7;
+    border-radius: 3px 0px 3px 3px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+.sender-triangle {
+  position:relative;
+  padding:15px;
+  margin:1em 0 0 0;
+  color:#000000;
+  background:#E1FFC7; /* default background for browsers without gradient support */
+}
+
+.sender-triangle:after {
+  content:"";
+  position:absolute;
+  bottom:-20px; /* value = - border-top-width - border-bottom-width */
+  left:50px; /* controls horizontal position */
+  border-width:20px 0 0 20px; /* vary these values to change the angle of the vertex */
+  border-style:solid;
+  border-color:#E1FFC7 transparent;
+  /* reduce the damage in FF3.0 */
+  display:block;
+  width:0;
+}
+
+.sender-triangle.right {
+  margin-right:10px;
+  background:#E1FFC7;
+}
+
+.sender-triangle.right:after {
+  top:-2px;
+  right:-10px; /* value = - border-left-width - border-right-width */
+  bottom:auto;
+  left:auto;
+  border-width:0 0 15px 10px; /* vary these values to change the angle of the vertex */
+  border-color:transparent #E1FFC7 ;
+}
+
+</style>
+</head>
+<body>
+<div id="container">
+    <div id="log"></div>
+    <div id="sidebar">
+        <div id="username" class="box"><b>User: -</b></div>
+        <div id="online" class="box"><b>Online: 0</b></div>
+        <div id="rooms" class="box"><b>Rooms: 0</b></div>
+        <div id="admins" class="box"><b>Admins: 0</b></div>
+        <button id="clearLog" class="btn">CLEAR LOG</button>
+        <div id="queue_list"></div>
+        <div id="room_list"></div>
+    </div>
+</div>
+<form id="form">
+    <input id="signAsAdmin" value="AS ADMIN" type="button" />
+    <input id="signAsGuest" value="AS GUEST" type="button"  />
+    <input id="queueRoom" value="QUEUE" type="button" />
+    <input type="submit" value="Send" />
+    <input type="text" id="msg" size="100"/>
+</form>
+</body>
+</html>
