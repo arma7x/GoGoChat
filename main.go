@@ -9,9 +9,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"chat/wss"
 )
-
-var addr = flag.String("addr", "0.0.0.0:" + os.Getenv("PORT"), "http service address")
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL)
@@ -28,12 +27,18 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
-	hub := newHub()
-	go hub.run()
+	hub := wss.NewHub()
+	go hub.Run()
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		wss.ServeWs(hub, w, r)
 	})
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	var addr = flag.String("addr", ":" + port, "http service address")
+	log.Println(*addr)
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package wss
 
 import (
 	"log"
@@ -52,7 +52,7 @@ type Hub struct {
 	queues map[string]bool
 }
 
-func newHub() *Hub {
+func NewHub() *Hub {
 	return &Hub{
 		broadcast:  make(chan Broadcast),
 		register:   make(chan *Client),
@@ -70,7 +70,7 @@ func newHub() *Hub {
 	}
 }
 
-func (h *Hub) run() {
+func (h *Hub) Run() {
 	log.Println("hub running")
 	for {
 		select {
@@ -188,7 +188,7 @@ func (h *Hub) run() {
 				if(h.admins[h.clients[queue.Id]]) {
 					h.clients[queue.Id].send <- Broadcast{"0", "SYSTEM", "FORBIDDEN:GUEST ONLY", "message", "0"}
 				} else {
-					if h.queues[queue.Id] {
+					if h.queues[queue.Id] || len(h.rooms[queue.Id]) > 1 {
 						h.clients[queue.Id].send <- Broadcast{"0", "SYSTEM", "ALREADY IN QUEUE", "message", "0"}
 					} else {
 						h.queues[queue.Id] = true
